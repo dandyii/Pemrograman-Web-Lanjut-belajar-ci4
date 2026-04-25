@@ -3,10 +3,14 @@
 namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
+use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
 use CodeIgniter\Filters\DebugToolbar;
+use CodeIgniter\Filters\ForceHTTPS;
 use CodeIgniter\Filters\Honeypot;
 use CodeIgniter\Filters\InvalidChars;
+use CodeIgniter\Filters\PageCache;
+use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 
 class Filters extends BaseConfig
@@ -18,13 +22,17 @@ class Filters extends BaseConfig
      * @var array<string, class-string|list<class-string>> [filter_name => classname]
      *                                                     or [filter_name => [classname1, classname2, ...]]
      */
-    public array $aliases = [
+public array $aliases = [
         'csrf'          => CSRF::class,
         'toolbar'       => DebugToolbar::class,
         'honeypot'      => Honeypot::class,
         'invalidchars'  => InvalidChars::class,
         'secureheaders' => SecureHeaders::class,
-        'auth'          => \App\Filters\Auth::class, 
+        'cors'          => Cors::class,
+        'forcehttps'    => ForceHTTPS::class,
+        'pagecache'     => PageCache::class,
+        'performance'   => PerformanceMetrics::class,
+        'auth'          => \App\Filters\Auth::class,
     ];
 
     /**
@@ -97,7 +105,5 @@ class Filters extends BaseConfig
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [
-        'auth' => ['before' => ['keranjang', 'produk', 'home']],
-    ];
+    public array $filters = [];
 }
