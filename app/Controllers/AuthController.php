@@ -5,34 +5,37 @@ namespace App\Controllers;
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\ResponseInterface;
 
+use App\Models\UserModel; 
+
 class AuthController extends BaseController
 {
+    protected $userModel;
+
    function __construct()
     {
-    helper('form');
+        helper('form');
+        $this->userModel = new UserModel();
     }
 
     public function login()
 {
     if ($this->request->getPost()) {
+        $rules = [
+            'username' => 'required|min_length[6]',
+            'password' => 'required|min_length[7]|numeric',
+        ];
+
+        if ($this->validate($rules)) {
         $username = $this->request->getVar('username');
         $password = $this->request->getVar('password');
 
-        $dataUser = [
-            'username' => 'april', 
-            'password' => '202cb962ac59075b964b07152d234b70', // ini adalah MD5 hash dari password '123'
-            'role' => 'admin',
-            'email' => 'april@gmail.com'
-        ];
+        $dataUser = $this->userModel ->where(['username' => $username])->first();
 
-        if ($username == $dataUser['username']) {
-            if (md5($password) == $dataUser['password']) {
-                date_default_timezone_set('Asia/Jakarta');
+        if ($dataUser) {
+	        if (password_verify($password, $dataUser['password'])) {
                 session()->set([
                     'username' => $dataUser['username'],
                     'role' => $dataUser['role'],
-                    'email' => $dataUser['email'],
-                    'waktu_login' => date('Y-m-d H:i:s'),
                     'isLoggedIn' => TRUE
                 ]);
 
@@ -45,6 +48,10 @@ class AuthController extends BaseController
             session()->setFlashdata('failed', 'Username Tidak Ditemukan');
             return redirect()->back();
         }
+    } else {
+    session()->setFlashdata('failed', $this->validator->listErrors());
+    return redirect()->back();
+}    
     } else {
         return view('v_login');
     }
