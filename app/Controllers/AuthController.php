@@ -36,6 +36,8 @@ class AuthController extends BaseController
                 session()->set([
                     'username' => $dataUser['username'],
                     'role' => $dataUser['role'],
+                    'email' => $dataUser['email'],
+                    'waktu_login' => date('Y-m-d H:i:s'),
                     'isLoggedIn' => TRUE
                 ]);
 
