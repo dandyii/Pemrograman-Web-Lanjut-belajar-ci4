@@ -18,6 +18,7 @@ class TransaksiController extends BaseController
     public function __construct()
         {
             helper(['number', 'form']);
+            helper('diskon_helper');
             $this->cart = service('cart');
 
             $this->transactionModel = new TransactionModel();
@@ -36,15 +37,38 @@ class TransaksiController extends BaseController
 
     public function cart_add()
         {
-            $this->cart->insert([
-                'id'      => $this->request->getPost('id'),
-                'qty'     => 1,
-                'price'   => $this->request->getPost('harga'),
-                'name'    => $this->request->getPost('nama'),
-                'options' => [
-                    'foto' => $this->request->getPost('foto')
-                ]
-            ]);
+            $productId = $this->request->getPost('id');
+            $price = $this->request->getPost('harga');
+            $name = $this->request->getPost('nama');
+            $foto = $this->request->getPost('foto');
+
+            $existingRowId = null;
+            $existingQty = 0;
+
+            foreach ($this->cart->contents() as $item) {
+                if ($item['id'] === $productId && ($item['options']['foto'] ?? '') === $foto) {
+                    $existingRowId = $item['rowid'];
+                    $existingQty = $item['qty'];
+                    break;
+                }
+            }
+
+            if ($existingRowId) {
+                $this->cart->update([
+                    'rowid' => $existingRowId,
+                    'qty'   => $existingQty + 1,
+                ]);
+            } else {
+                $this->cart->insert([
+                    'id'      => $productId,
+                    'qty'     => 1,
+                    'price'   => $price,
+                    'name'    => $name,
+                    'options' => [
+                        'foto' => $foto
+                    ]
+                ]);
+            }
             
             session()->setFlashdata(
                 'success',
@@ -67,10 +91,15 @@ class TransaksiController extends BaseController
                 ]);
             }
 
+            $action = $this->request->getPost('action');
             session()->setFlashdata(
                 'success',
                 'Keranjang berhasil diperbarui'
             );
+
+            if ($action === 'checkout') {
+                return redirect()->to(base_url('checkout'));
+            }
 
             return redirect()->to(base_url('keranjang'));
         }
@@ -186,11 +215,13 @@ class TransaksiController extends BaseController
 
             $ongkir = (int) $this->request->getPost('ongkir');
 
+            $diskonData = calculate_diskon_total($subtotal);
             $transaction = [
                 'username'    => $this->request->getPost('username'),
                 'alamat'      => $this->request->getPost('alamat'),
                 'ongkir'      => $ongkir,
-                'total_harga' => $subtotal + $ongkir,
+                'diskon'      => $diskonData['amount'],
+                'total_harga' => $subtotal + $ongkir - $diskonData['amount'],
                 'status'      => 0, 
             ];
 
@@ -203,14 +234,25 @@ class TransaksiController extends BaseController
             $transactionId = $this->transactionModel->getInsertID();
 
             // insert transaction detail
+            $detailSuccess = true;
             foreach ($cartItems as $item) {
-                $this->transactionDetailModel->insert([
+                $inserted = $this->transactionDetailModel->insert([
                     'transaction_id' => $transactionId,
                     'product_id'     => $item['id'],
                     'jumlah'         => $item['qty'],
                     'diskon'         => 0,
-                    'subtotal_harga' => $item['qty'] * $item['price'] 
+                    'subtotal_harga' => $item['qty'] * $item['price']
                 ]);
+
+                if (!$inserted) {
+                    $detailSuccess = false;
+                    break;
+                }
+            }
+
+            if (!$detailSuccess) {
+                $db->transRollback();
+                return redirect()->back()->with('error', 'Gagal menyimpan detail transaksi');
             }
 
             $db->transComplete();
@@ -219,9 +261,9 @@ class TransaksiController extends BaseController
                 return redirect()->back()->with('error', 'Gagal membuat transaksi');
             }
 
-                //hapus session keranjang belanja 
+            // hapus session keranjang belanja
             $this->cart->destroy();
-            return redirect()->to(base_url());
+            return redirect()->to(base_url())->with('success', 'Pesanan berhasil dibuat');
         }
 
         public function history()

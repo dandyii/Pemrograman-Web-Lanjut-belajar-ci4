@@ -91,6 +91,11 @@
                 </tr>
                 <tr>
                     <td colspan="2"></td>
+                    <td>Diskon</td>
+                    <td><span id="diskon" class="text-danger">IDR 0 (0%)</span></td>
+                </tr>
+                <tr>
+                    <td colspan="2"></td>
                     <td>Total</td>
                     <td><span id="total"><?= number_to_currency($total, 'IDR') ?></span></td>
                 </tr>
@@ -106,12 +111,26 @@
 $(document).ready(function() {
     let ongkir = 0;
     let subtotal = <?= $total ?>;
+    let diskon = 0;
+    let diskonRate = 0;
     hitungTotal();
 
     function hitungTotal() {
-        let total = subtotal + ongkir;
+        if (subtotal >= 50000000) {
+            diskonRate = 0.15;
+        } else if (subtotal >= 30000000) {
+            diskonRate = 0.10;
+        } else if (subtotal >= 10000000) {
+            diskonRate = 0.05;
+        } else {
+            diskonRate = 0;
+        }
+
+        diskon = Math.round(subtotal * diskonRate);
+        let total = subtotal - diskon + ongkir;
 
         $("#ongkir").val(ongkir);
+        $("#diskon").text(`IDR ${diskon.toLocaleString('id-ID')} (${(diskonRate * 100).toFixed(0)}%)`);
         $("#total").text(`IDR ${total.toLocaleString('id-ID')}`);
         $("#total_harga").val(total);
     }

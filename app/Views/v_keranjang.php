@@ -33,8 +33,8 @@ if (session()->getFlashData('success')) {
                     <td><?php echo $item['name'] ?></td>
                     <td><img src="<?php echo base_url() . "img/" . $item['options']['foto'] ?>" width="100px"></td>
                     <td><?php echo number_to_currency($item['price'], 'IDR') ?></td> 
-                    <td><input type="number" min="1" name="qty<?php echo $i++ ?>" class="form-control" value="<?php echo $item['qty'] ?>"></td>
-                    <td><?php echo number_to_currency($item['subtotal'], 'IDR') ?></td>
+                    <td><input type="number" min="1" name="qty<?php echo $i++ ?>" class="form-control qty-input" data-price="<?= $item['price'] ?>" value="<?php echo $item['qty'] ?>"></td>
+                    <td class="item-subtotal"><?php echo number_to_currency($item['subtotal'], 'IDR') ?></td>
                     <td>
                         <a href="<?php echo base_url('keranjang/delete/' . $item['rowid'] . '') ?>" class="btn btn-danger"><i class="bi bi-trash"></i></a>
                     </td>
@@ -51,10 +51,46 @@ if (session()->getFlashData('success')) {
     <?php echo "Total = " . number_to_currency($total, 'IDR') ?>
 </div>
 
-<button type="submit" class="btn btn-primary">Perbarui Keranjang</button>
+<button type="submit" class="btn btn-primary" name="action" value="update">Perbarui Keranjang</button>
  <a class="btn btn-warning" href="<?php echo base_url() ?>keranjang/clear">Kosongkan Keranjang</a>
  <?php if (!empty($items)) : ?>
-    <a class="btn btn-success" href="<?php echo base_url() ?>checkout">Selesai Belanja</a>
+    <button type="submit" class="btn btn-success" name="action" value="checkout">Selesai Belanja</button>
 <?php endif; ?>
-<?php echo form_close() ?> 
+<?php echo form_close() ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const qtyInputs = document.querySelectorAll('.qty-input');
+        const totalEl = document.querySelector('.alert-info');
+
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(number);
+        }
+
+        qtyInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                const price = parseInt(this.dataset.price, 10) || 0;
+                const qty = parseInt(this.value, 10) || 0;
+                const subtotalEl = this.closest('tr').querySelector('.item-subtotal');
+                const subtotal = price * qty;
+                subtotalEl.textContent = formatRupiah(subtotal);
+
+                let grandTotal = 0;
+                document.querySelectorAll('.item-subtotal').forEach(item => {
+                    const value = item.textContent.replace(/[^0-9]/g, '');
+                    grandTotal += parseInt(value || 0, 10);
+                });
+
+                if (totalEl) {
+                    totalEl.textContent = 'Total = ' + formatRupiah(grandTotal);
+                }
+            });
+        });
+    });
+</script> 
 <?= $this->endSection() ?>
